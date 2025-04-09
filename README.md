@@ -6,6 +6,10 @@ The classifier is used to classifiy handwritten digits as explained in https://a
 
 ![](./demo.gif)
 
+Devices used:
+* Arduino Mega2560
+* 2.4" TFT-LCD with touch from MCUFRIEND_kbv ([purchase link](https://www.tokopedia.com/cncstorebandung/cnc-2-4-tft-lcd-touch-shield-module-for-arduino-uno-mega))
+
 The obtained weight matrix (`W`) from [AEK3LBB3](https://github.com/auralius/AEK3LBB3) is then plugged into the classifier program inside the Arduino device (in this case: Mega2560). The classifier program is mainly composed of:  
 * acquisition
 * discretization
