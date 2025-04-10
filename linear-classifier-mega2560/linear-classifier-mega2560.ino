@@ -35,7 +35,7 @@ byte GRID[8][8];
 #define YELLOW 0xFFE0
 #define WHITE 0xFFFF
 
-uint16_t GREYS[17];
+uint16_t GREYS[17]; // Grayscale colors in 17 steps: 0 to 16
 
 // The W matrix computed by SVM of Softmax
 float W[65 * 10] = { -7.5004e-04, 1.6986e-03, 2.2155e-04, 1.8328e-03, 7.7484e-04, -6.7503e-04, 1.3654e-03, 1.5934e-03, 3.1074e-04, 1.0143e-03,
@@ -104,12 +104,11 @@ float W[65 * 10] = { -7.5004e-04, 1.6986e-03, 2.2155e-04, 1.8328e-03, 7.7484e-04
                      -4.8152e-03, 4.4371e-02, 2.4252e-02, -1.5928e-02, 6.0644e-03, -7.0936e-03, -6.6536e-03, -2.0885e-03, -2.3916e-03, -1.2427e-02,
                      8.1631e-03, 2.5212e-03, 1.1335e-02, 1.0080e-02, 1.5500e-02, 1.2233e-02, 8.6945e-03, 1.0324e-02, 5.6079e-03, 8.4603e-03 };
 
-// Grayscale of 17 steps from blak (0x0000) to white(0xFFFF)
-// #15 and #16 are both (0xFFFF) for simplification reason since 17 is an odd number
+// Grayscale of 17 steps from black (0x0000) to white(0xFFFF)
+// #15 and #16 are both (0xFFFF) for simplification since 17 is an odd number
 void create_greys() {
-  for (byte k = 0; k < 16; k++) {
+  for (byte k = 0; k < 16; k++)
     GREYS[k] = ((2 * k << 11) | (4 * k << 5) | 2 * k);
-  }
   GREYS[16] = 0xFFFF;
 }
 
@@ -239,7 +238,7 @@ void draw_buttons(char *label1, char *label2) {
   tft.print(label2);
 }
 
-// Put text at the bottom of the scrre, right above the two buttons
+// Put text at the bottom of the screen, right above the two buttons
 void set_lower_text(char *label) {
   tft.fillRect(0, tft.height() - 2 * W8 - 8, tft.width(), W8 + 8, BLACK);
   tft.setTextColor(BLUE);
@@ -274,10 +273,6 @@ void setup(void) {
 
   currentcolor = BLUE;
   delay(1000);
-
-  //for (byte i=0; i<8; i++)
-  //  for (byte j=0; j<8; j++)
-  //    GRID[i][j] = NINE[i+j*8];
 }
 
 void loop() {
@@ -329,7 +324,7 @@ void loop() {
           GRID[i][j] = counter;
         }
       }
-      delay(1000);
+      //delay(1000);
       normalize_grid();
       area_setup();
       draw_roi();
