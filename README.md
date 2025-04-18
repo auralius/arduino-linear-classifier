@@ -28,4 +28,4 @@ The obtained weight matrix Wfrom [AEK3LBB3](https://github.com/auralius/AEK3LBB3
 
 Note:
 
-* The Arduino program has also been tested on Arduino Uno R3 and R4. To make the LCD works with an Arduino Uno R4, download and install the MCUFRIEND_kbv library from this [link](https://github.com/slviajero/MCUFRIEND_kbv) instead of from the default Arduino library manager.
+* This implementation has been tested on Arduino Uno R3, R4, and Mega2560.  However, special actions are needed for Arduino UNO R4. To make the LCD works with an Arduino Uno R4, instead of using the default MCUFRIEND_kbv library, use the alternative library from this [link.](https://github.com/slviajero/MCUFRIEND_kbv)
