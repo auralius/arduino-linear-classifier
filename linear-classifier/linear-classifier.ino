@@ -1,6 +1,6 @@
 /**
  * Auralius Manurung -- Universitas Telkom
- * auralius.manurun@ieee.org
+ * auralius.manurung@ieee.org
  */
 
 #include <MCUFRIEND_kbv.h>
@@ -288,7 +288,8 @@ void predict() {
   for (uint16_t i = 0; i < 10; i++) {
     y[i] = 0;
     for (uint16_t j = 0; j < 65; j++) {
-      y[i] = y[i] + (x[j] * W[i + j * 10]);
+      float w = pgm_read_float(&W[i + j * 10]); // Read from PROGMEM one element only!
+      y[i] = y[i] + (x[j] * w);
     }
   }
 
