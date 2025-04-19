@@ -6,10 +6,10 @@
 #include <MCUFRIEND_kbv.h>
 MCUFRIEND_kbv tft;  // hard-wired for UNO shields anyway.
 #include <TouchScreen.h>
-#include "matrix.h" // the weight matrix is here
+#include "matrix.h"  // the weight matrix is here
 
 const int XP = 6, XM = A2, YP = A1, YM = 7;  //ID=0x9341
-const int TS_LEFT = 907, TS_RT = 136, TS_TOP = 942, TS_BOT = 139;
+const int TS_LEFT = 900, TS_RT = 185, TS_TOP = 932, TS_BOT = 196;
 
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 TSPoint tp;
@@ -17,11 +17,13 @@ TSPoint tp;
 #define MINPRESSURE 100
 #define MAXPRESSURE 1000
 
-int16_t ROI[8];  //xmin, ymin, xmax, ymax, width, length, center x, center y
+const int16_t PENRADIUS = 1;
 
-int16_t W2, W8, W815;  // W2: width/2, W8: width/8, W810: width/8/10
-int16_t W16, W1615;    // W16: width/16, W1615: width/16/15
-int16_t PENRADIUS = 1;
+const int16_t W8  = 240 / 8;
+const int16_t W16 = 240 / 16;
+const int16_t W2  = 240 / 2;
+
+int16_t ROI[8];  //xmin, ymin, xmax, ymax, width, length, center x, center y
 
 // The discretized drawing area: 8x8 grids, max value of each grid is 16
 byte GRID[8][8];
@@ -51,7 +53,7 @@ void create_greys() {
 void show_tft(void) {
   tft.setCursor(0, 0);
   tft.setTextSize(1);
-  tft.print(F("ID=0x"));
+  tft.println("ID=0x");
   tft.println(tft.readID(), HEX);
   tft.println("Screen is " + String(tft.width()) + "x" + String(tft.height()));
   tft.println("");
@@ -94,8 +96,8 @@ void reset_grid() {
   ROI[1] = 1000;  // ymin
   ROI[2] = 0;     // xmax
   ROI[3] = 0;     // ymax
-  ROI[4] = 0;     
-  ROI[5] = 0;     
+  ROI[4] = 0;
+  ROI[5] = 0;
   ROI[6] = 0;
   ROI[7] = 0;
 }
@@ -103,12 +105,14 @@ void reset_grid() {
 
 // Normalize the numbers in the grids such that they range from 0 to 16
 void normalize_grid() {
+  // find the maximum
   float maxval = 0.0;
   for (byte i = 0; i < 8; i++)
     for (byte j = 0; j < 8; j++)
       if (GRID[i][j] > maxval)
         maxval = GRID[i][j];
 
+  // normalize such that the maximum is 16.0
   for (byte i = 0; i < 8; i++)
     for (byte j = 0; j < 8; j++) {
       GRID[i][j] = (float)GRID[i][j] / maxval * 16.0 + 0.5;  // round instead of floor!
@@ -124,9 +128,9 @@ void area_setup() {
   for (byte i = 0; i < 8; i++) {
     for (byte j = 0; j < 8; j++) {
       tft.fillRect(i * W16, j * W16, W16, W16, GREYS[GRID[i][j]]);
-      tft.drawRect(i * W16, j * W16, W16, W16, CYAN);
     }
   }
+  tft.drawRect(0, 0, W16 * 8, W16 * 8, GREEN);
 }
 
 
@@ -146,15 +150,15 @@ void track_roi(uint16_t xpos, uint16_t ypos) {
 
   ROI[6] = ROI[0] + ROI[4] / 2;
   ROI[7] = ROI[1] + ROI[5] / 2;
-
 }
 
 
 // Draw the ROI as a red rectangle
 void draw_roi() {
   tft.drawRect(ROI[0], ROI[1], ROI[4], ROI[5], RED);
-  tft.drawCircle(ROI[6], ROI[7], 2,RED);
+  tft.drawCircle(ROI[6], ROI[7], 2, RED);
 }
+
 
 // Draw the two button at the bottom of the screen
 void draw_buttons(char *label1, char *label2) {
@@ -179,25 +183,19 @@ void set_lower_text(char *label) {
   tft.print(label);
 }
 
+
 // Arduino setup function
 void setup(void) {
   create_greys();
 
   tft.reset();
   tft.begin(tft.readID());
-  Serial.begin(9600);
+  //Serial.begin(9600);
   tft.setRotation(0);
   tft.fillScreen(BLACK);
   show_tft();
 
   tft.fillScreen(BLACK);
-
-  W8 = tft.width() / 8;
-  W16 = tft.width() / 16;
-  W1615 = tft.width() / 16 / 15;
-  W2 = tft.width() / 2;
-  W815 = W8 / 15;
-
   reset_grid();
   area_setup();
 
@@ -205,6 +203,7 @@ void setup(void) {
 
   delay(1000);
 }
+
 
 void loop() {
   int16_t xpos, ypos;  //screen coordinates
@@ -241,24 +240,23 @@ void loop() {
 
       for (byte i = 0; i < 8; i++) {
         for (byte j = 0; j < 8; j++) {
-          
           for (byte k = 0; k < 15; k++) {
             for (byte l = 0; l < 15; l++) {
-              uint16_t x = i * W16 + k * W1615;
-              uint16_t y = j * W16 + l * W1615;
+              int16_t x = i * W16 + k;
+              int16_t y = j * W16 + l;
 
               uint16_t pixel = tft.readPixel(x, y);
+
               if (pixel == BLUE) {
-                //uint16_t x_ = x + (60-ROI[6]); // Align to center (120,120)
-                //uint16_t y_ = y + (60-ROI[7]); 
-                float s = 120.0/(float)ROI[5];
-                float s2 = s*0.5;
-                uint16_t x_ = s*(x - ROI[0])+60-ROI[4]*s2; // Align to center (120,120)
-                uint16_t y_ = s*(y - ROI[1]); 
-                if ((x_>=0) && (x_<120) && (y_>=0) && (y_<120))
+                float s = 120.0 / (float)ROI[5];
+                int16_t x_ = s * (float)(x - ROI[0]) + 60.0 - s * 0.5 * (float)ROI[4];  // Align to center (60,60)
+                int16_t y_ = s * (float)(y - ROI[1]);
+
+                if ((x_ >= 0) && (x_ < 120) && (y_ >= 0) && (y_ < 120))
                   tft.fillCircle(x_, y_, 1, RED);
-                
-                GRID[x_/W16][y_/W16] = GRID[x_/W16][y_/W16] + 1;
+
+                GRID[x_ / W16][y_ / W16] = GRID[x_ / W16][y_ / W16] + 1;
+                //GRID[x/W16][y/W16] = GRID[x/W16][y/W16] + 1;
               }
             }
           }
@@ -273,23 +271,25 @@ void loop() {
   }
 }
 
+
+// Convert to float, flatten the grids, add 1 at the end (for the bias tricks)
+float get_x(uint16_t i) {
+  if (i < 64)
+    return (float)GRID[i % 8][i / 8];
+  else
+    return 1.0;
+}
+
+
 // Do the prediction
 void predict() {
-  // Flatten the grids, add 1 at the end
-  float x[65];
-  for (byte i = 0; i < 8; i++)
-    for (byte j = 0; j < 8; j++)
-      x[i + j * 8] = GRID[i][j];
-  x[64] = 1;
-
-  // Compute the score values
-  // y = x * W (matrix multiplication)
+  // Compute the scores: y = x * W (matrix multiplication)
   float y[10];
   for (uint16_t i = 0; i < 10; i++) {
     y[i] = 0;
     for (uint16_t j = 0; j < 65; j++) {
-      float w = pgm_read_float(&W[i + j * 10]); // Read from PROGMEM one element only!
-      y[i] = y[i] + (x[j] * w);
+      float w = pgm_read_float(&W[i + j * 10]);  // Read from PROGMEM one element only!
+      y[i] = y[i] + (get_x(j) * w);
     }
   }
 
@@ -308,9 +308,6 @@ void predict() {
   itoa(label, label_txt, 10);
   set_lower_text(label_txt);
 
-  //Serial.println(">>> x:");
-  //for (uint16_t i=0; i<65; i++)
-  //  Serial.println(x[i]);
   //Serial.println(">>> y:");
   //for (uint16_t i = 0; i < 10; i++)
   //  Serial.println(y[i]);
