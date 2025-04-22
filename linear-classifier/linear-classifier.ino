@@ -252,11 +252,11 @@ void loop() {
                 int16_t x_ = s * (float)(x - ROI[0]) + 60.0 - s * 0.5 * (float)ROI[4];  // Align to center (60,60)
                 int16_t y_ = s * (float)(y - ROI[1]);
 
-                if ((x_ >= 0) && (x_ < 120) && (y_ >= 0) && (y_ < 120))
+                if ((x_ >= 0) && (x_ < 120) && (y_ >= 0) && (y_ < 120)){
                   tft.fillCircle(x_, y_, 1, RED);
-
-                GRID[x_ / W16][y_ / W16] = GRID[x_ / W16][y_ / W16] + 1;
-                //GRID[x/W16][y/W16] = GRID[x/W16][y/W16] + 1;
+                  GRID[x_ / W16][y_ / W16] = GRID[x_ / W16][y_ / W16] + 1;
+                  //GRID[x/W16][y/W16] = GRID[x/W16][y/W16] + 1;
+                }
               }
             }
           }
