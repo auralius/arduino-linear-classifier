@@ -4,7 +4,12 @@ This is a demonstration for the linear classifiers (SVM and softmax) described i
 
 The classifier is used to classify handwritten digits as explained in https://archive.ics.uci.edu/dataset/80/optical+recognition+of+handwritten+digits.
 
- <img src="./demo.gif" alt="Description" width="400">
+ <img src="./demo_8by8.gif" alt="Description" width="400">
+ 
+ There is also a demonstration by using the USPS dataset, which has higher resolution (16x16). The demo still works with Arduino UNO R3. 
+ In fact, this is where we meet the storage limit of our Aduino UNO R3.
+ 
+  <img src="./demo_16by16.gif" alt="Description" width="400">
 
 Devices used:
 
