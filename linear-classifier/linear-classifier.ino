@@ -94,6 +94,11 @@ void area_setup() {
   }
 
   tft.drawRect(0, 0, W16 * 8, W16 * 8, GREEN);
+
+  tft.setTextSize(1);
+  tft.setTextColor(WHITE);
+  tft.setCursor(0, 320 - W8 * 2);
+  tft.print(F("Linear Classifier Demo\nIntelligent Biomedical Systems,\nUniversitas Telkom, Bandung, 2025"));
 }
 
 
