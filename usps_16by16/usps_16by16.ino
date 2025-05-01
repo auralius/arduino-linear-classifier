@@ -4,7 +4,7 @@
  */
 
 #include <MCUFRIEND_kbv.h>
-MCUFRIEND_kbv tft;  // hard-wired for UNO shields anyway.
+MCUFRIEND_kbv tft;  // hard-wiTFT_RED for UNO shields anyway.
 #include <TouchScreen.h>
 #include "matrix.h"  // the weight matrix is here
 
@@ -16,7 +16,7 @@ TSPoint tp;
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
 
-const int16_t PENRADIUS = 1;
+const int16_t PENRADIUS = 2;
 
 const int16_t L   = 128;
 const int16_t L16 = 8;
@@ -30,16 +30,9 @@ int16_t ROI[8];  //xmin, ymin, xmax, ymax, width, length, center x, center y
 // The discretized drawing area: 8x8 grids, max value of each grid is 16
 byte GRID[16][16];
 
-// Assign human-readable names to some common 16-bit color values:
-#define BLACK 0x0000
-#define BLUE 0x001F
-#define RED 0xF800
-#define GREEN 0x07E0
-#define WHITE 0xFFFF
-
 uint16_t GREYS[32];  // Grayscale colors in 32 steps: 0 to 255
 
-// Grayscale of 32 steps from black (0x0000) to white(0xFFFF)
+// Grayscale of 32 steps from TFT_BLACK (0x0000) to TFT_WHITE(0xFFFF)
 void create_greys() {
   for (int16_t k = 0; k < 32; k++)
     GREYS[k] = ((k << 11) | (2 * k << 5) | k);
@@ -79,7 +72,7 @@ void normalize_grid() {
 // Draw the grids in the screen
 // The fill-color or the gray-level of each grid is set based on its value
 void area_setup() {
-  tft.fillRect(0, 0, 240, 320 - W8, BLACK);
+  tft.fillRect(0, 0, 240, 320 - W8 * 2, TFT_BLACK);
 
   for (int16_t i = 0; i < 16; i++) {
     for (int16_t j = 0; j < 16; j++) {
@@ -87,7 +80,7 @@ void area_setup() {
     }
   }
 
-  tft.drawRect(0, 0, L, L, GREEN);
+  tft.drawRect(0, 0, L, L, TFT_GREEN);
 }
 
 
@@ -110,53 +103,63 @@ void track_roi(int16_t xpos, int16_t ypos) {
 }
 
 
-// Draw the ROI as a red rectangle
-/*
+// Draw the ROI as a TFT_RED rectangle
 void draw_roi() {
-  tft.drawRect(ROI[0], ROI[1], ROI[4], ROI[5], RED);
-  tft.drawCircle(ROI[6], ROI[7], 2, RED);
+  tft.drawRect(ROI[0], ROI[1], ROI[4], ROI[5], TFT_RED);
+  tft.drawCircle(ROI[6], ROI[7], 2, TFT_RED);
 }
-*/
+
 
 // Draw the two button at the bottom of the screen
 void draw_buttons(char *label1, char *label2) {
+  tft.setTextSize(1);
+  tft.setTextColor(TFT_WHITE);
+  tft.setCursor(0, 320 - W8 * 2);
+  tft.print(F("Linear Classifier\nIntelligent Biomedical Systems\nUniversitas Telkom, Bandung"));
+  
   // Add 2 buttons in the bottom: CLEAR and PREDICT
-  tft.fillRect(0, tft.height() - W8, W2, W2, GREEN);
-  tft.fillRect(W2, tft.height() - W8, W2, W2, RED);
-  tft.setTextColor(BLACK);
+  tft.fillRect(0, 320 - W8, W2, W2, TFT_GREEN);
+  tft.fillRect(W2, 320 - W8, W2, W2, TFT_RED);
+  tft.setTextColor(TFT_BLACK);
   tft.setTextSize(2);
-  tft.setCursor(6, tft.height() - W8 + 6);
+  tft.setCursor(6, 320 - W8 + 6);
   tft.print(label1);
-  tft.setCursor(W2 + 6, tft.height() - W8 + 6);
+  tft.setCursor(W2 + 6, 320 - W8 + 6);
   tft.print(label2);
 }
 
 
 // Put text at the bottom of the screen, right above the two buttons
 void print_label(byte label) {
-  char label_txt[3];
-  itoa(label, label_txt, 10);
-
-  tft.setTextColor(RED);
-  
-  tft.setCursor(W16 * 9, W16 * 2);
+  tft.setCursor(W16 * 10, W16 * 2);
   tft.setTextSize(1);
-  tft.print("Prediction:");
+  tft.setTextColor(TFT_RED);
+  
+  if (label == 255){
+    tft.print("Please wait!");
+  }
+  else{
+    tft.print("Prediction:");
 
-  tft.setCursor(W16 * 10, W16 * 3);
-  tft.setTextSize(4);
-  tft.print(label);
+    tft.setCursor(W16 * 11, W16 * 4);
+    tft.setTextSize(4);
+
+    char label_txt[3];
+    itoa(label, label_txt, 10);
+    tft.print(label);
+  }
 }
 
 
 // Arduino setup function
 void setup(void) {
   //Serial.begin(9600);
+  
   create_greys();
 
   tft.reset();
   tft.begin(tft.readID());
-  //tft.setRotation(0);
+  tft.fillScreen(TFT_BLACK);
 
   reset_grid();
   area_setup();
@@ -181,7 +184,7 @@ void loop() {
 
     // are we in drawing area ?
     if (((ypos - PENRADIUS) > 0) && ((ypos + PENRADIUS) < L) && ((xpos - PENRADIUS) > 0) && ((xpos + PENRADIUS) < L)) {
-      tft.fillCircle(xpos, ypos, PENRADIUS, BLUE);
+      tft.fillCircle(xpos, ypos, PENRADIUS, TFT_BLUE);
       track_roi(xpos, ypos);
     }
 
@@ -193,7 +196,8 @@ void loop() {
 
     // PREDICT?
     if ((ypos > tft.height() - W8) && (xpos > W2)) {
-      //draw_roi();
+      print_label(255);
+      draw_roi();
 
       for (int16_t i = 0; i < 16; i++) {
         for (int16_t j = 0; j < 16; j++) {
@@ -204,13 +208,13 @@ void loop() {
 
               uint16_t pixel = tft.readPixel(x, y);
 
-              if (pixel == BLUE) {
+              if (pixel == TFT_BLUE) {
                 float s = 128.0 / (float)ROI[5];
                 int16_t x_ = s * (float)(x - ROI[0]) + 64.0 - s * 0.5 * (float)ROI[4];  // Align to center (60,60)
                 int16_t y_ = s * (float)(y - ROI[1]);
 
                 if ((x_ >= 0) && (x_ < L) && (y_ >= 0) && (y_ < L)){
-                  tft.fillCircle(x_, y_, 1, RED);
+                  tft.fillCircle(x_, y_, 1, TFT_RED);
                   GRID[x_ / L16][y_ / L16] = GRID[x_ / L16][y_ / L16] + 1;
                   //GRID[x/L16][y/L16] = GRID[x/L16][y/L16] + 1;
                 }
@@ -222,8 +226,8 @@ void loop() {
       //delay(1000);
       normalize_grid();
       area_setup();
-      draw_buttons("CLEAR", "PREDICT");
       predict();
+      reset_grid();
     }
   }
 }
@@ -239,7 +243,7 @@ float get_x(int16_t i) {
 }
 
 
-// Do the prediction
+// Do the PREDICion
 void predict() {
   // Compute the scores: y = x * W (matrix multiplication)
   float y[10];
@@ -253,7 +257,7 @@ void predict() {
 
   // Find the largest scores
   float max_y = 0;
-  int16_t label;
+  int16_t label = 0;
   for (int16_t i = 0; i < 10; i++) {
     if (y[i] > max_y) {
       max_y = y[i];
@@ -270,9 +274,9 @@ void predict() {
   tft.println("Scores:\n");
   for (int16_t i = 0; i < 10; i++){
     if (i == label)
-      tft.setTextColor(RED);
+      tft.setTextColor(TFT_RED);
     else
-      tft.setTextColor(BLUE);
+      tft.setTextColor(TFT_BLUE);
 
     tft.print(i);
     tft.print(" : ");
