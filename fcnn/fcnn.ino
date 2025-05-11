@@ -8,7 +8,7 @@ MCUFRIEND_kbv tft;  // hard-wiTFT_RED for UNO shields anyway.
 #include <TouchScreen.h>
 
 const int XP = 8, YP = A3, XM = A2, YM = 9;  //most common configuration
-const int TS_LEFT = 80, TS_RT = 904, TS_TOP = 901, TS_BOT = 111;
+const int TS_LEFT = 153, TS_RT = 864, TS_TOP = 895, TS_BOT = 114;
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 TSPoint tp;
 
