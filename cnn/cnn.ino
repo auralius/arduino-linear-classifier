@@ -9,14 +9,14 @@ MCUFRIEND_kbv tft;  // hard-wiTFT_RED for UNO shields anyway.
 
 const int XP = 8, YP = A3, XM = A2, YM = 9;  //most common configuration
 const int TS_LEFT = 153, TS_RT = 864, TS_TOP = 895, TS_BOT = 114;
+//const int TS_LEFT = 118, TS_RT = 903, TS_TOP = 899, TS_BOT = 73;
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 TSPoint tp;
 
 #define SD_CS 10
 #define MINPRESSURE 200
 #define MAXPRESSURE 1000
-
-const int16_t PENRADIUS = 1;
+#define PENRADIUS   1
 
 const int16_t L = 128;
 const int16_t L8 = 16;
@@ -26,18 +26,16 @@ const int16_t W8 = 240 / 8;
 const int16_t W16 = 240 / 16;
 const int16_t W2 = 240 / 2;
 
-int16_t ROI[8];  //xmin, ymin, xmax, ymax, width, length, center x, center y
+byte ROI[8];  //xmin, ymin, xmax, ymax, width, length, center x, center y
 
 // The discretized drawing area: 8x8 grids, max value of each grid is 255
-int16_t PADDED_GRID[18][18];
 int16_t GRID[16][16];
-byte POOLED_GRID[8][8];
 
 // Grayscale colors in 17 steps: 0 to 16
 uint16_t GREYS[17];
 
 // Number of neurons in the hidden layer
-const uint16_t HIDDEN_SIZE = 50;
+const uint16_t HIDDEN_SIZE = 40;
 
 // Filter kernel
 const int16_t kernel[3][3] = {{1, 2, 1}, {2, 4, 2}, {1, 2, 2}};
@@ -57,32 +55,31 @@ void reset_grid() {
     for (int16_t j = 0; j < 16; j++)
       GRID[i][j] = 0;
 
-  for (int16_t i = 0; i < 18; i++)
-    for (int16_t j = 0; j < 18; j++)
-      PADDED_GRID[i][j] = 0;
-
   // Reset ROI
   for (int16_t i = 0; i < 8; i++)
     ROI[i] = 0;
 
-  ROI[0] = 1000;  // xmin
-  ROI[1] = 1000;  // ymin
+  ROI[0] = 250;  // xmin
+  ROI[1] = 250;  // ymin
+}
+
+
+int16_t get_padded_grid(int16_t i, int16_t j){
+  if ((i == 0) || (j == 0) || (i == 17) || (j == 17))
+    return 0;
+  
+  return GRID[i - 1][j - 1];
 }
 
 
 void do_convolution() {
-  // Padding
-  for (int16_t i = 1; i < 17; i++)
-    for (int16_t j = 1; j < 17; j++)
-        PADDED_GRID[i][j] = GRID[i-1][j-1];
-
   // Convolution
   for (int16_t i = 0; i < 16; i++){
     for (int16_t j = 0; j < 16; j++) {
       int16_t v = 0;
       for (int16_t k = 0; k < 3; k++)
         for (int16_t l = 0; l < 3; l++)
-          v = v + kernel[k][l] * PADDED_GRID[i + k][j + l];
+          v = v + kernel[k][l] * get_padded_grid(i + k, j + l);
       
       if (v < 0) v = 0;
       GRID[i][j] = v / 16;
@@ -98,7 +95,7 @@ void do_convolution() {
           if (GRID[i*2 + k][j*2 + l] > v)
             v =  GRID[i*2 + k][j*2 + l];
       
-      POOLED_GRID[i][j] = v;
+      GRID[i][j] = v;
     }
   }
 }
@@ -125,24 +122,22 @@ void normalize_grid() {
 void area_setup() {
   tft.fillRect(0, 0, L, 320 - W8 * 2, TFT_BLACK);
 
-  for (int16_t i = 0; i < 16; i++) {
-    for (int16_t j = 0; j < 16; j++) {
+  for (int16_t i = 0; i < 16; i++)
+    for (int16_t j = 0; j < 16; j++)
       tft.fillRect(i * L16, j * L16, L16, L16, GREYS[GRID[i][j] / 16]);
-    }
-  }
 
-  tft.drawRect(0, 0, L, L, TFT_GREEN);
+  tft.drawRect(0, 0, L, L, TFT_WHITE);
 }
 
-
+// The small box in the top lef corner, to show the max poling result
 void area_setup2() {
   for (int16_t i = 0; i < 8; i++) {
     for (int16_t j = 0; j < 8; j++) {
-      tft.fillRect(i * 4, j * 4, 4, 4, GREYS[POOLED_GRID[i][j] / 16]);
+      tft.fillRect(i * 6, j * 6, 6, 6, GREYS[GRID[i][j] / 16]);
     }
   }
   
-  tft.drawRect(0, 0, 32, 32, TFT_RED);
+  tft.drawRect(0, 0, 48, 48, TFT_RED);
 }
 
 
@@ -175,28 +170,27 @@ void draw_roi() {
 // Draw the two button at the bottom of the screen
 void draw_buttons(char *label1, char *label2) {
   tft.setTextSize(1);
-  tft.setTextColor(TFT_WHITE);
   tft.setCursor(0, 320 - W8 * 2);
-  tft.print(F("Convolutional Neural Network\nIntelligent Biomedical Systems\nUniversitas Telkom, Bandung"));
-
+  tft.print(F("AEK3LBB3 - CNN Demo on UNO R4\n"));
+  tft.print(F("Hidden neurons : "));
+  tft.print(HIDDEN_SIZE);
+  
   // Add 2 buttons in the bottom: CLEAR and PREDICT
-  tft.fillRect(0, 320 - W8, W2, W2, TFT_GREEN);
+  tft.fillRect(0, 320 - W8, W2, W2, TFT_BLUE);
   tft.fillRect(W2, 320 - W8, W2, W2, TFT_RED);
-  tft.setTextColor(TFT_BLACK);
   tft.setTextSize(2);
   tft.setCursor(6, 320 - W8 + 6);
   tft.print(label1);
-  tft.setCursor(W2 + 6, 320 - W8 + 6);
+  tft.setCursor(W2 + 8, 320 - W8 + 6);
   tft.print(label2);
 }
 
 
 // Put text at the bottom of the screen, right above the two buttons
-void print_label(byte label, uint16_t color = TFT_RED) {
+void print_label(byte label) {
   tft.fillRect(L, 0, 240 - L, 320 - W8 * 2, TFT_BLACK);
   tft.setCursor(W16 * 10, W16 * 2);
   tft.setTextSize(1);
-  tft.setTextColor(color);
 
   if (label == 255) {
     tft.print(F("Please wait!"));
@@ -305,7 +299,6 @@ void loop() {
       area_setup();
       do_convolution();
       normalize_grid();
-      area_setup();
       area_setup2();
       predict();
       reset_grid();
@@ -318,7 +311,7 @@ void loop() {
 // add 1.0 at the end (for the bias tricks)
 float get_x(int16_t i) {
   if (i < 8 * 8)
-    return (float)POOLED_GRID[i % 8][i / 8];
+    return (float)GRID[i % 8][i / 8];
   else
     return 1.0;
 }
@@ -345,7 +338,6 @@ void predict() {
   float y[HIDDEN_SIZE];  // hidden_size
   float c[10];           // output_size
   float w;
-  char s[16];
   File f;
 
   unsigned long st = micros();  // timer starts
@@ -397,18 +389,18 @@ void predict() {
   // Display the scores
   tft.setCursor(0, W16 * 9);
   tft.setTextSize(1);
-  tft.println("Scores:\n");
+  tft.println(F("Scores:\n"));
   for (int16_t i = 0; i < 10; i++) {
     if (i == label)
       tft.setTextColor(TFT_RED);
     else
-      tft.setTextColor(TFT_BLUE);
+      tft.setTextColor(TFT_GREEN);
 
     tft.print(i);
     tft.print(" : ");
     tft.println(c[i], 4);
   }
-  tft.setTextColor(TFT_GREEN);
-  tft.print("Time (s) : ");
-  tft.println(et, 2);
+  tft.print("\nIn ");
+  tft.print(et, 2);
+  tft.println(" s.");
 }
