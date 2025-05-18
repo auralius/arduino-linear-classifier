@@ -102,17 +102,17 @@ void do_convolution() {
 
 
 // Normalize the numbers in the grids such that they range from 0 to 16
-void normalize_grid() {
+void normalize_grid(int16_t n) {
   // find the maximum
   int16_t maxval = 0;
-  for (int16_t i = 0; i < 16; i++)
-    for (int16_t j = 0; j < 16; j++)
+  for (int16_t i = 0; i < n; i++)
+    for (int16_t j = 0; j < n; j++)
       if (GRID[i][j] > maxval)
         maxval = GRID[i][j];
 
   // normalize such that the maximum is 255.0
-  for (int16_t i = 0; i < 16; i++)
-    for (int16_t j = 0; j < 16; j++)
+  for (int16_t i = 0; i < n; i++)
+    for (int16_t j = 0; j < n; j++)
       GRID[i][j] = round((float)GRID[i][j] / (float)maxval * 255.0);  // round instead of floor!
 }
 
@@ -133,11 +133,11 @@ void area_setup() {
 void area_setup2() {
   for (int16_t i = 0; i < 8; i++) {
     for (int16_t j = 0; j < 8; j++) {
-      tft.fillRect(i * 6, j * 6, 6, 6, GREYS[GRID[i][j] / 16]);
+      tft.fillRect(i * 6 + L, j * 6 + L - 48, 6, 6, GREYS[GRID[i][j] / 16]);
     }
   }
   
-  tft.drawRect(0, 0, 48, 48, TFT_RED);
+  tft.drawRect(L, L - 48, 48, 48, TFT_RED);
 }
 
 
@@ -188,8 +188,8 @@ void draw_buttons(char *label1, char *label2) {
 
 // Put text at the bottom of the screen, right above the two buttons
 void print_label(byte label) {
-  tft.fillRect(L, 0, 240 - L, 320 - W8 * 2, TFT_BLACK);
-  tft.setCursor(W16 * 10, W16 * 2);
+  tft.fillRect(L, 0, 240 - L, L, TFT_BLACK);
+  tft.setCursor(W16 * 10, W16);
   tft.setTextSize(1);
 
   if (label == 255) {
@@ -199,7 +199,7 @@ void print_label(byte label) {
   } else {
     tft.print(F("Prediction:"));
 
-    tft.setCursor(W16 * 11, W16 * 4);
+    tft.setCursor(W16 * 11, W16 * 2);
     tft.setTextSize(4);
 
     char label_txt[8];
@@ -287,20 +287,19 @@ void loop() {
                 if ((x_ >= 0) && (x_ < L) && (y_ >= 0) && (y_ < L)) {
                   tft.fillCircle(x_, y_, 1, TFT_WHITE);
                   GRID[x_ / L16][y_ / L16] = GRID[x_ / L16][y_ / L16] + 1;
-                  //GRID[x/L16][y/L16] = GRID[x/L16][y/L16] + 1;
                 }
               }
             }
           }
         }
       }
-      //delay(1000);
-      normalize_grid();
+      //delay(1000)
+      normalize_grid(16);
       area_setup();
       do_convolution();
-      normalize_grid();
-      area_setup2();
+      normalize_grid(8);
       predict();
+      area_setup2();
       reset_grid();
     }
   }
@@ -338,6 +337,8 @@ void predict() {
   float y[HIDDEN_SIZE];  // hidden_size
   float c[10];           // output_size
   float w;
+  float max_c = 0;
+  int16_t label = 0;
   File f;
 
   unsigned long st = micros();  // timer starts
@@ -367,29 +368,22 @@ void predict() {
     w = read_float(f);
     c[i] = c[i] + w;
 
-    progress = update_progress(progress);
-  }
-  f.close();
-
-  // Find the largest scores
-  float max_c = 0;
-  int16_t label = 0;
-  for (int16_t i = 0; i < 10; i++) {
+    // Keep the largest scores
     if (c[i] > max_c) {
       max_c = c[i];
       label = i;
     }
+
+    progress = update_progress(progress);
   }
+  f.close();
 
   float et = (float)(micros() - st) * 1e-6;  // timer stops
 
-  // Display the results
-  print_label(label);
-
   // Display the scores
   tft.setCursor(0, W16 * 9);
-  tft.setTextSize(1);
   tft.println(F("Scores:\n"));
+  
   for (int16_t i = 0; i < 10; i++) {
     if (i == label)
       tft.setTextColor(TFT_RED);
@@ -400,7 +394,12 @@ void predict() {
     tft.print(" : ");
     tft.println(c[i], 4);
   }
+
+  // Display the elapsed time
   tft.print("\nIn ");
   tft.print(et, 2);
   tft.println(" s.");
+
+  // Display the results
+  print_label(label);
 }
